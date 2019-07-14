@@ -1,0 +1,9 @@
+[package]
+name = "ppm"
+version = "0.1.0"
+authors = ["MattWoelk <matt.woelk@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+nom = "5.0.0"
+pretty_assertions = "0.6.1"
