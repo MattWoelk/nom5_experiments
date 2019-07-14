@@ -3,6 +3,7 @@
 use pretty_assertions::assert_eq; //, assert_ne};
 
 use nom;
+use nom::sequence::terminated;
 use nom::{
     bytes::complete::{tag, take_while, take_while_m_n},
     combinator::map_res,
@@ -39,7 +40,7 @@ pub struct Header {
 #[derive(Debug, PartialEq)]
 pub struct PPM {
     pub header: Header,
-    pub data: PPMData,
+    pub data: Vec<Vec<Color>>,
 }
 
 fn from_hex(input: &str) -> Result<u8, std::num::ParseIntError> {
@@ -60,13 +61,15 @@ fn is_whitespace(c: char) -> bool {
 }
 
 fn parse_ppm_header(input: &str) -> IResult<&str, Header> {
+    let take_alphanumeric = take_while(char::is_alphanumeric);
+    let take_whitespace = take_while(is_whitespace);
+
     let (input, _) = tag("P")(input)?;
-    let (input, data_type) = take_while(|c| "36".contains(c))(input)?;
-    let (input, _) = take_while(is_whitespace)(input)?;
-    let (input, width) = take_while(|c: char| c.is_alphanumeric())(input)?;
-    let (input, _) = take_while(is_whitespace)(input)?;
-    let (input, height) = take_while(|c: char| c.is_alphanumeric())(input)?;
-    let (input, _) = take_while(is_whitespace)(input)?;
+    let (input, data_type) = terminated(take_while(|c| "36".contains(c)), &take_whitespace)(input)?;
+    let (input, width) = take_alphanumeric(input)?;
+    let (input, _) = take_whitespace(input)?;
+    let (input, height) = take_alphanumeric(input)?;
+    let (input, _) = take_whitespace(input)?;
 
     Ok((
         input,
