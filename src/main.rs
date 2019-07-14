@@ -31,14 +31,23 @@ fn is_hex_digit(c: char) -> bool {
     c.is_digit(16)
 }
 
-fn parse_header_start(input: &str) -> IResult<&str, Header> {
+//fn consume_whitespace<Input>(input: &str) -> IResult<&str, &str> {
+//    let (input, _) = take_while(|c: char| c.is_whitespace())(input)?;
+//    Ok((input, input))
+//}
+
+fn is_whitespace(c: char) -> bool {
+    " \n\r\t".contains(c)
+}
+
+fn parse_ppm_header(input: &str) -> IResult<&str, Header> {
     let (input, _) = tag("P")(input)?;
     let (input, _) = take_while(|c| "36".contains(c))(input)?;
-    let (input, _) = take_while(|c| " \n\r".contains(c))(input)?;
+    let (input, _) = take_while(is_whitespace)(input)?;
     let (input, width) = take_while(|c: char| c.is_alphanumeric())(input)?;
-    let (input, _) = take_while(|c| " \n\r".contains(c))(input)?;
+    let (input, _) = take_while(is_whitespace)(input)?;
     let (input, height) = take_while(|c: char| c.is_alphanumeric())(input)?;
-    let (input, _) = take_while(|c| " \n\r".contains(c))(input)?;
+    let (input, _) = take_while(is_whitespace)(input)?;
 
     Ok((
         input,
@@ -84,7 +93,7 @@ fn parse_color() {
 #[test]
 fn parse_header() {
     assert_eq!(
-        parse_header_start("P6 32 32"),
+        parse_ppm_header("P6 32 32"),
         Ok((
             "",
             Header {
@@ -98,7 +107,7 @@ fn parse_header() {
 #[test]
 fn parse_header2() {
     assert_eq!(
-        parse_header_start("P6 109 23"),
+        parse_ppm_header("P6 109 23"),
         Ok((
             "",
             Header {
