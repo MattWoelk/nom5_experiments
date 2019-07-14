@@ -18,9 +18,28 @@ pub struct Color {
 }
 
 #[derive(Debug, PartialEq)]
+pub enum PPMDataType {
+    ASCII,
+    BYTE,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum PPMData {
+    ASCII(Vec<char>),
+    BYTE(Vec<u8>),
+}
+
+#[derive(Debug, PartialEq)]
 pub struct Header {
+    pub data_type: PPMDataType,
     pub width: u32,
     pub height: u32,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct PPM {
+    pub header: Header,
+    pub data: PPMData,
 }
 
 fn from_hex(input: &str) -> Result<u8, std::num::ParseIntError> {
@@ -42,7 +61,7 @@ fn is_whitespace(c: char) -> bool {
 
 fn parse_ppm_header(input: &str) -> IResult<&str, Header> {
     let (input, _) = tag("P")(input)?;
-    let (input, _) = take_while(|c| "36".contains(c))(input)?;
+    let (input, data_type) = take_while(|c| "36".contains(c))(input)?;
     let (input, _) = take_while(is_whitespace)(input)?;
     let (input, width) = take_while(|c: char| c.is_alphanumeric())(input)?;
     let (input, _) = take_while(is_whitespace)(input)?;
@@ -52,6 +71,10 @@ fn parse_ppm_header(input: &str) -> IResult<&str, Header> {
     Ok((
         input,
         Header {
+            data_type: match data_type {
+                "3" => PPMDataType::ASCII,
+                _ => PPMDataType::BYTE,
+            },
             width: width.parse().unwrap(),
             height: height.parse().unwrap(),
         },
@@ -60,6 +83,10 @@ fn parse_ppm_header(input: &str) -> IResult<&str, Header> {
 
 fn hex_primary(input: &str) -> IResult<&str, u8> {
     map_res(take_while_m_n(2, 2, is_hex_digit), from_hex)(input)
+}
+
+fn parse_ppm(input: &str) -> IResult<&str, PPM> {
+    unimplemented!();
 }
 
 fn parse_hex_color(input: &str) -> IResult<&str, Color> {
@@ -93,10 +120,11 @@ fn parse_color() {
 #[test]
 fn parse_header() {
     assert_eq!(
-        parse_ppm_header("P6 32 32"),
+        parse_ppm_header("P3 32 32"),
         Ok((
             "",
             Header {
+                data_type: PPMDataType::ASCII,
                 width: 32,
                 height: 32,
             }
@@ -111,6 +139,7 @@ fn parse_header2() {
         Ok((
             "",
             Header {
+                data_type: PPMDataType::BYTE,
                 width: 109,
                 height: 23,
             }
