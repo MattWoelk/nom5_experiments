@@ -11,36 +11,33 @@ use nom::{
     IResult,
 };
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Color {
     pub red: u8,
     pub green: u8,
     pub blue: u8,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum PPMDataType {
     ASCII,
     BYTE,
 }
 
-#[derive(Debug, PartialEq)]
-pub enum PPMData {
-    ASCII(Vec<char>),
-    BYTE(Vec<u8>),
-}
+type PPMData = Vec<Vec<Color>>;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Header {
     pub data_type: PPMDataType,
     pub width: u32,
     pub height: u32,
+    pub max_value: u32,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct PPM {
     pub header: Header,
-    pub data: Vec<Vec<Color>>,
+    pub data: PPMData,
 }
 
 fn from_hex(input: &str) -> Result<u8, std::num::ParseIntError> {
@@ -70,6 +67,8 @@ fn parse_ppm_header(input: &str) -> IResult<&str, Header> {
     let (input, _) = take_whitespace(input)?;
     let (input, height) = take_alphanumeric(input)?;
     let (input, _) = take_whitespace(input)?;
+    let (input, max_value) = take_alphanumeric(input)?;
+    let (input, _) = take_whitespace(input)?;
 
     Ok((
         input,
@@ -80,6 +79,7 @@ fn parse_ppm_header(input: &str) -> IResult<&str, Header> {
             },
             width: width.parse().unwrap(),
             height: height.parse().unwrap(),
+            max_value: max_value.parse().unwrap(),
         },
     ))
 }
@@ -88,8 +88,27 @@ fn hex_primary(input: &str) -> IResult<&str, u8> {
     map_res(take_while_m_n(2, 2, is_hex_digit), from_hex)(input)
 }
 
-fn parse_ppm(input: &str) -> IResult<&str, PPM> {
+fn parse_ppm_data_ascii(input: &str) -> IResult<&str, PPMData> {
     unimplemented!();
+}
+
+fn parse_ppm_data_bytes(input: &str) -> IResult<&str, PPMData> {
+    unimplemented!();
+}
+
+fn parse_ppm(input: &str) -> IResult<&str, PPM> {
+    let (input, header) = parse_ppm_header(input)?;
+
+    Ok((
+        "",
+        PPM {
+            header: header.clone(),
+            data: match &header.data_type {
+                PPMDataType::ASCII => parse_ppm_data_ascii(input)?.1,
+                PPMDataType::BYTE => parse_ppm_data_bytes(input)?.1,
+            },
+        },
+    ))
 }
 
 fn parse_hex_color(input: &str) -> IResult<&str, Color> {
@@ -123,13 +142,14 @@ fn parse_color() {
 #[test]
 fn parse_header() {
     assert_eq!(
-        parse_ppm_header("P3 32 32"),
+        parse_ppm_header("P3 32 32 255"),
         Ok((
             "",
             Header {
                 data_type: PPMDataType::ASCII,
                 width: 32,
                 height: 32,
+                max_value: 255,
             }
         ))
     );
@@ -138,13 +158,64 @@ fn parse_header() {
 #[test]
 fn parse_header2() {
     assert_eq!(
-        parse_ppm_header("P6 109 23"),
+        parse_ppm_header("P6 109 23 10"),
         Ok((
             "",
             Header {
                 data_type: PPMDataType::BYTE,
                 width: 109,
                 height: 23,
+                max_value: 10,
+            }
+        ))
+    );
+}
+
+#[test]
+fn parse_ascii1() {
+    assert_eq!(
+        parse_ppm(
+            "P3
+2 2
+15
+ 0  0  0    0  0  0
+ 0  0  0    0 15  7"
+        ),
+        Ok((
+            "",
+            PPM {
+                header: Header {
+                    data_type: PPMDataType::ASCII,
+                    width: 2,
+                    height: 2,
+                    max_value: 15,
+                },
+                data: vec![
+                    vec![
+                        Color {
+                            red: 0,
+                            green: 0,
+                            blue: 0
+                        },
+                        Color {
+                            red: 0,
+                            green: 0,
+                            blue: 0
+                        }
+                    ],
+                    vec![
+                        Color {
+                            red: 0,
+                            green: 0,
+                            blue: 0
+                        },
+                        Color {
+                            red: 0,
+                            green: 255,
+                            blue: 119
+                        }
+                    ]
+                ],
             }
         ))
     );
